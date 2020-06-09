@@ -14,7 +14,7 @@ namespace Project_FinchControl
     // Application Type: Console
     // Author: Velis, John
     // Dated Created: 05/31/2020
-    // Last Modified: 06/  /2020
+    // Last Modified: 06/09/2020
     //
     // **************************************************
 

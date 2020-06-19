@@ -63,7 +63,7 @@ namespace Project_FinchControl
                 Console.WriteLine("\ta) Connect Finch Robot");
                 Console.WriteLine("\tb) Talent Show");
                 Console.WriteLine("\tc) Data Recorder");
-                Console.WriteLine("\td) Alarm System");
+                Console.WriteLine("\td) Light Alarm System");
                 Console.WriteLine("\te) User Programming");
                 Console.WriteLine("\tf) Disconnect Finch Robot");
                 Console.WriteLine("\tq) Quit");
@@ -88,7 +88,7 @@ namespace Project_FinchControl
                         break;
 
                     case "d":
-
+                        DisplayLightAlarmMenuScreen(myFinch);
                         break;
 
                     case "e":
@@ -113,6 +113,8 @@ namespace Project_FinchControl
 
             } while (!quitApplication);
         }
+
+         
 
         #region TALENT SHOW
 
@@ -372,6 +374,10 @@ namespace Project_FinchControl
 
         #region DATA RECORDER
 
+        /// <summary>
+        /// *****************************************************************
+        /// *                    Data Recorder Menu                         *
+        /// *****************************************************************
         static void DisplayDataRecorderMenuScreen(Finch myFinch)
         {
             int numberOfDataPoints = 0;
@@ -432,6 +438,7 @@ namespace Project_FinchControl
 
             } while (!quitMenu);
         }
+
 
         static void DataRecorderDisplayData(double[] temperatures, int numberOfDataPoints)
         {
@@ -635,6 +642,411 @@ namespace Project_FinchControl
             DisplayContinuePrompt();
 
             return numberOfDataPoints;
+        }
+
+        #endregion
+
+        #region ALARM SYSTEM
+
+        /// <summary>
+        /// *****************************************************************
+        /// *                     Light Alarm Menu                          *
+        /// *****************************************************************
+        /// </summary>
+        static void DisplayLightAlarmMenuScreen(Finch myFinch)
+        {
+            Console.CursorVisible = true;
+
+            bool quitMenu = false;
+            string menuChoice;
+
+            string sensorsToMonitor = "";
+            string rangeType = "";
+            int minMaxThresholdValue = 0;
+            int timeToMonitor = 0;
+            int temperatureMinMaxThresholdValue = 0;
+
+            do
+            {
+                DisplayScreenHeader("Light Alarm Menu");
+
+                //
+                // get user menu choice
+                //
+                Console.WriteLine("\ta) Set Sensors to Monitor");
+                Console.WriteLine("\tb) Set Range Type");
+                Console.WriteLine("\tc) Set Minimum/Maximum Threshold Value");
+                Console.WriteLine("\td) Set Time to Monitor");
+                Console.WriteLine("\te) Set Alarm");
+                Console.WriteLine("\tf) Set Temperature Minimum/maximum Threshold Value");
+                Console.WriteLine("\tg)Temperature and Light Monitoring");
+                Console.WriteLine("\tq) Main Menu");
+                Console.Write("\t\tEnter Choice:");
+                menuChoice = Console.ReadLine().ToLower();
+
+                //
+                // process user menu choice
+                //
+                switch (menuChoice)
+                {
+                    case "a":
+                        sensorsToMonitor = LightAlarmDisplaySetSensorsToMonitor();
+                        break;
+
+                    case "b":
+                        rangeType = LightAlarmDisplaySetRangeType();
+                        break;
+
+                    case "c":
+                        minMaxThresholdValue = LightAlarmDisplaySetMinMaxThresholdValue(rangeType, myFinch);
+                        break;
+
+                    case "d":
+                        timeToMonitor = LightAlarmDisplaySetTimeToMonitor();
+                        break;
+
+                    case "e":
+                        LightAlarmDisplaySetAlarm(sensorsToMonitor, rangeType, minMaxThresholdValue, timeToMonitor, myFinch);
+                        break;
+
+                    case "f":
+                        temperatureMinMaxThresholdValue = LightAlarmDisplayTemperatureMinMaxThresholdValue(rangeType);
+                        break;
+
+                    case "g":
+                        LightAlarmDisplayTemperatureMonitoring(sensorsToMonitor, rangeType, minMaxThresholdValue, timeToMonitor, temperatureMinMaxThresholdValue, myFinch);
+                        break;
+
+                    case "q":
+                        quitMenu = true;
+                        break;
+
+                    default:
+                        Console.WriteLine();
+                        Console.WriteLine("\tEnter a letter for the menu choice.");
+                        DisplayContinuePrompt();
+                        break;
+                }
+
+            } while (!quitMenu);
+        }
+
+        static int LightAlarmDisplayTemperatureMinMaxThresholdValue(string rangeType)
+        {
+            int temperatureMinMaxThresholdValue;
+
+            DisplayScreenHeader("\tTemperature Minimum/Maximum Threshold Value");
+
+            bool validResponse;
+            string userResponse;
+            do
+            {
+                validResponse = true;
+
+                Console.Write($"\tEnter the {rangeType} temperature value: ");
+                userResponse = Console.ReadLine();
+
+                if (!int.TryParse(userResponse, out temperatureMinMaxThresholdValue))
+                {
+                    validResponse = false;
+
+                    Console.WriteLine();
+                    Console.WriteLine("It appears you have entered an invalid number for the temperature value.");
+
+                    Console.WriteLine();
+                    Console.WriteLine("\tPress any key to continue");
+                    Console.ReadKey();
+                    Console.Clear();
+                }
+            } while (!validResponse);
+
+            Console.WriteLine($"\tYou will be collecting a {rangeType} range type value of {temperatureMinMaxThresholdValue}.");
+
+            DisplayContinuePrompt();
+            return temperatureMinMaxThresholdValue;
+        }
+        static void LightAlarmDisplayTemperatureMonitoring(
+            string sensorsToMonitor, 
+            string rangeType, 
+            int minMaxThresholdValue, 
+            int timeToMonitor,
+            int temperatureMinMaxThresholdValue,
+            Finch myFinch)
+        {
+            int secondsElapsed = 0;
+            bool thresholdExceeded = false;
+            int currentLightSensorValue = 0;
+            double currentTemperature = 0;
+
+            DisplayScreenHeader("Set Alarm for Temperature and Light");
+
+            Console.WriteLine($"\tSensors to Monitor: {sensorsToMonitor}");
+            Console.WriteLine($"\tRange Type: {rangeType}");
+            Console.WriteLine($"\tLight Min/Max Threshold Value: {minMaxThresholdValue}");
+            Console.WriteLine($"\tTemperature Min/Max Threshold Value: {temperatureMinMaxThresholdValue}");
+            Console.WriteLine($"\tTime to Monitor: {timeToMonitor}");
+            Console.WriteLine();
+
+            Console.WriteLine("Press any key to begin monitoring.");
+            Console.ReadKey();
+            Console.WriteLine();
+
+            while ((secondsElapsed < timeToMonitor) && !thresholdExceeded)
+            {
+                switch (sensorsToMonitor)
+                {
+                    case "left":
+                        currentLightSensorValue = myFinch.getLeftLightSensor();
+                        break;
+
+                    case "right":
+                        currentLightSensorValue = myFinch.getRightLightSensor();
+                        break;
+
+                    case "both":
+                        currentLightSensorValue = (myFinch.getRightLightSensor() + myFinch.getRightLightSensor()) / 2;
+                        break;
+                }
+
+                currentTemperature = myFinch.getTemperature();
+
+                switch (rangeType)
+                {
+                    case "minimum":
+                        if (currentLightSensorValue < minMaxThresholdValue || currentTemperature < temperatureMinMaxThresholdValue)
+                        {
+                            thresholdExceeded = true;
+                        }
+                        break;
+
+                    case "maximum":
+                        if (currentLightSensorValue > minMaxThresholdValue || currentTemperature > temperatureMinMaxThresholdValue)
+                        {
+                            thresholdExceeded = true;
+                        }
+                        break;
+                }
+                myFinch.wait(1000);
+                secondsElapsed++;
+            }
+
+            if (thresholdExceeded)
+            {
+                myFinch.setLED(0, 0, 300);
+                for (int i = 0; i < 5; i++)
+                {
+                    myFinch.noteOn(1000);
+                    myFinch.wait(500);
+                    myFinch.noteOff();
+                }
+                Console.WriteLine($"\tThe {rangeType} threshold value was exceeded by the current light sensor value of {currentLightSensorValue}");
+                DisplayContinuePrompt();
+                myFinch.setLED(0, 0, 0);
+            }
+
+            else
+            {
+                myFinch.setLED(0, 300, 0);
+                for (int i = 0; i < 5; i++)
+                {
+                    myFinch.noteOn(1470);
+                    myFinch.wait(500);
+                    myFinch.noteOff();
+                }
+                Console.WriteLine($"\tThe {rangeType}  light threshold value of {currentLightSensorValue} and " +
+                    "{temperatureRangeType} temperature threshold value of {currentTemperatureValue} was not exceeded.");
+            }
+
+            DisplayMenuPrompt("Light Alarm");
+        }
+
+        static void LightAlarmDisplaySetAlarm(
+            string sensorsToMonitor, 
+            string rangeType, 
+            int minMaxThresholdValue, 
+            int timeToMonitor, 
+            Finch myFinch)
+        {
+            int secondsElapsed = 0;
+            bool thresholdExceeded = false;
+            int currentLightSensorValue = 0;
+
+            DisplayScreenHeader("Set Alarm");
+
+            Console.WriteLine($"\tSensors to Monitor: {sensorsToMonitor}");
+            Console.WriteLine($"\tRange Type: {rangeType}");
+            Console.WriteLine($"\tMin/Max Threshold Value: {minMaxThresholdValue}");
+            Console.WriteLine($"\tTime to Monitor: {timeToMonitor}");
+            Console.WriteLine();
+
+            Console.WriteLine("Press any key to begin monitoring.");
+            Console.ReadKey();
+            Console.WriteLine();
+
+            while ((secondsElapsed < timeToMonitor) && !thresholdExceeded)
+            {
+                switch (sensorsToMonitor)
+                {
+                    case "left":
+                        currentLightSensorValue = myFinch.getLeftLightSensor();
+                        break;
+
+                    case "right":
+                        currentLightSensorValue = myFinch.getRightLightSensor();
+                        break;
+
+                    case "both":
+                        currentLightSensorValue = (myFinch.getRightLightSensor() + myFinch.getRightLightSensor()) / 2;
+                        break;
+                }
+                switch (rangeType)
+                {
+                    case "minimum":
+                        if (currentLightSensorValue < minMaxThresholdValue)
+                        {
+                            thresholdExceeded = true;
+                        }
+                        break;
+
+                    case "maximum":
+                        if (currentLightSensorValue > minMaxThresholdValue)
+                        {
+                            thresholdExceeded = true;
+                        }
+                        break;
+                }
+                myFinch.wait(1000);
+                secondsElapsed++;
+            }
+
+            if (thresholdExceeded)
+            {
+                myFinch.setLED(300, 0, 0);
+                for (int i = 0; i < 5; i++)
+                {
+                    myFinch.noteOn(800);
+                    myFinch.wait(250);
+                    myFinch.noteOff();
+                }
+                Console.WriteLine($"\tThe {rangeType} threshold value was exceeded by the current light sensor value of {currentLightSensorValue}");
+                DisplayContinuePrompt();
+                myFinch.setLED(0, 0, 0);
+            }
+
+            else
+            {
+                Console.WriteLine($"\tThe {rangeType} threshold value of {currentLightSensorValue} was not exceeded.");
+            }
+
+            DisplayMenuPrompt("Light Alarm");
+        }
+
+        static int LightAlarmDisplaySetTimeToMonitor()
+        {
+            int timeToMonitor;
+
+            DisplayScreenHeader("\tTime to Monitor");
+
+            bool validResponse;
+            string userResponse;
+            do
+            {
+                validResponse = true;
+
+                Console.Write($"\tEnter the amount of time to monitor [in seconds]: ");
+                userResponse = Console.ReadLine();
+
+                if (!int.TryParse(userResponse, out timeToMonitor))
+                {
+                    validResponse = false;
+
+                    Console.WriteLine();
+                    Console.WriteLine("It appears you have entered an invalid number for the amount of time to monitor." +
+                    "Please enter a positive number.");
+
+                    Console.WriteLine();
+                    Console.WriteLine("\tPress any key to continue");
+                    Console.ReadKey();
+                    Console.Clear();
+                }
+            } while (!validResponse);
+
+            Console.WriteLine($"\tYou will be collecting data for {timeToMonitor} seconds.");
+
+            DisplayMenuPrompt("Light Alarm");
+            return timeToMonitor;
+        }
+
+        static int LightAlarmDisplaySetMinMaxThresholdValue(string rangeType, Finch myFinch)
+        {
+            int minMaxThresholdValue;
+
+            DisplayScreenHeader("Minimum/Maximum Threshold Value");
+
+            Console.WriteLine($"Left light sensor ambient value: {myFinch.getLeftLightSensor()} ");
+            Console.WriteLine($"Right light sensor ambient value: {myFinch.getRightLightSensor()} ");
+            Console.WriteLine();
+
+            bool validResponse;
+            string userResponse;
+            do
+            {
+                validResponse = true;
+
+                Console.Write($"\tEnter the {rangeType} light sensor value: ");
+                userResponse = Console.ReadLine();
+
+                if (!int.TryParse(userResponse, out minMaxThresholdValue))
+                {
+                    validResponse = false;
+
+                    Console.WriteLine();
+                    Console.WriteLine("It appears you have entered an invalid number for the light sensor value." +
+                    "Please enter a positive number.");
+
+                    Console.WriteLine();
+                    Console.WriteLine("\tPress any key to continue");
+                    Console.ReadKey();
+                    Console.Clear();
+                }
+            } while (!validResponse);
+
+            Console.WriteLine($"\tYou will be collecting a {rangeType} range type value of {minMaxThresholdValue}.");
+
+
+            DisplayMenuPrompt("Light Alarm");
+
+            return minMaxThresholdValue;
+        }
+
+        static string LightAlarmDisplaySetSensorsToMonitor()
+        {
+            string sensorsToMonitor;
+
+            DisplayScreenHeader("Sensors to Monitor");
+
+            Console.WriteLine("\tSensors to monitor [left, right, both]:");
+            sensorsToMonitor = Console.ReadLine();
+
+            Console.WriteLine($"You will be monitoring from (the) {sensorsToMonitor} sensor(s).");
+
+            DisplayMenuPrompt("Light Alarm");
+            return sensorsToMonitor;
+        }
+
+        static string LightAlarmDisplaySetRangeType()
+        {
+            string rangeType;
+
+            DisplayScreenHeader("Range Type");
+
+            Console.WriteLine("\tRange Type [minimum, maximum]:");
+            rangeType = Console.ReadLine();
+
+            Console.WriteLine($"You will be collecting the {rangeType} range type.");
+
+            DisplayMenuPrompt("Light Alarm");
+            return rangeType;
         }
 
         #endregion

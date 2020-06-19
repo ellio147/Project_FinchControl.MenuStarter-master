@@ -839,7 +839,8 @@ namespace Project_FinchControl
                     myFinch.wait(500);
                     myFinch.noteOff();
                 }
-                Console.WriteLine($"\tThe {rangeType} threshold value was exceeded by the current light sensor value of {currentLightSensorValue}");
+                Console.WriteLine($"\tThe {rangeType} light threshold value of {currentLightSensorValue} or " +
+                    $"{rangeType} temperature threshold value of {currentTemperature} was exceeded.");
                 DisplayContinuePrompt();
                 myFinch.setLED(0, 0, 0);
             }
@@ -853,8 +854,8 @@ namespace Project_FinchControl
                     myFinch.wait(500);
                     myFinch.noteOff();
                 }
-                Console.WriteLine($"\tThe {rangeType}  light threshold value of {currentLightSensorValue} and " +
-                    "{temperatureRangeType} temperature threshold value of {currentTemperatureValue} was not exceeded.");
+                Console.WriteLine($"\tThe {rangeType} light threshold value of {currentLightSensorValue} or " +
+                    $"{rangeType} temperature threshold value of {currentTemperature} was not exceeded.");
             }
 
             DisplayMenuPrompt("Light Alarm");

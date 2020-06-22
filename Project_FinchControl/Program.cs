@@ -1,9 +1,7 @@
-﻿using System;
+﻿using FinchAPI;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
-using FinchAPI;
-using HidSharp.ReportDescriptors.Units;
 
 namespace Project_FinchControl
 {
@@ -44,6 +42,7 @@ namespace Project_FinchControl
         static void Main(string[] args)
         {
             SetTheme();
+            DisplayLoginRegister();
             DisplayWelcomeScreen();
             DisplayMenuScreen();
             DisplayAppRatingScreen();
@@ -81,7 +80,8 @@ namespace Project_FinchControl
                 Console.WriteLine("\tc) Data Recorder");
                 Console.WriteLine("\td) Light Alarm System");
                 Console.WriteLine("\te) User Programming");
-                Console.WriteLine("\tf) Disconnect Finch Robot");
+                Console.WriteLine("\tf) Change Theme");
+                Console.WriteLine("\tg) Disconnect Finch Robot");
                 Console.WriteLine("\tq) Quit");
                 Console.Write("\t\tEnter Choice:");
                 menuChoice = Console.ReadLine().ToLower();
@@ -112,6 +112,10 @@ namespace Project_FinchControl
                         break;
 
                     case "f":
+                        DisplaySetTheme();
+                        break;
+
+                    case "g":
                         DisplayDisconnectFinchRobot(myFinch);
                         break;
 
@@ -415,6 +419,8 @@ namespace Project_FinchControl
                 Console.WriteLine("\tb) Frequency of Data Points ");
                 Console.WriteLine("\tc) Get Data ");
                 Console.WriteLine("\td) Show Data");
+                Console.WriteLine("\te) Write Data to File");
+                Console.WriteLine("\tf) Read Data from File");
                 Console.WriteLine("\tq) Main Menu");
                 Console.Write("\t\tEnter Choice:");
                 menuChoice = Console.ReadLine().ToLower();
@@ -440,6 +446,14 @@ namespace Project_FinchControl
                         DataRecorderDisplayData(temperatures, numberOfDataPoints);
                         break;
 
+                    case "e":
+                        DataRecorderWriteDataToFile(myFinch);
+                        break;
+
+                    case "f":
+                        DataRecorderReadDataFromFile();
+                        break;
+
                     case "q":
                         quitMenu = true;
                         break;
@@ -454,6 +468,121 @@ namespace Project_FinchControl
             } while (!quitMenu);
         }
 
+        static void DataRecorderReadDataFromFile()
+        {
+            string temperature;
+            string light;
+            string timeStamp;
+            bool validData = true;
+
+            do
+            {
+                DisplayScreenHeader("Read Data From File");
+
+                Console.WriteLine();
+                Console.WriteLine("\tEnter temperature:");
+                temperature = Console.ReadLine();
+                Console.WriteLine("\tEnter light senor value:");
+                light = Console.ReadLine();
+                Console.WriteLine("\tEnter time stamp");
+                timeStamp = Console.ReadLine();
+
+                validData = IsValidDataSet(temperature, light, timeStamp);
+
+                Console.WriteLine();
+
+                if (validData)
+                {
+                    Console.WriteLine("You have entered a valid data set!");
+                }
+
+                else
+                {
+                    Console.WriteLine("Invalid data combination.");
+                    Console.WriteLine("Please try again.");
+                }
+                DisplayContinuePrompt();
+            } while (!validData);
+        }
+        static List<(string temperature, string light, string timeStamp)> DataRecorderReadDataFile()
+        {
+            string dataPath = @"Data/TempAndLight.txt";
+
+            string[] dataCollectedArray;
+            (string temperature, string light, string timeStamp) dataCollectedTouple;
+
+            List<(string temperature, string light, string timeStamp)> collectedData =
+                new List<(string temperature, string light, string timeStamp)>();
+
+            dataCollectedArray = File.ReadAllLines(dataPath);
+
+            foreach (string loginInfoText in dataCollectedArray)
+            {
+                dataCollectedArray = loginInfoText.Split(',');
+
+                dataCollectedTouple.temperature = dataCollectedArray[0];
+                dataCollectedTouple.light = dataCollectedArray[1];
+                dataCollectedTouple.timeStamp = dataCollectedArray[2];
+
+                collectedData.Add(dataCollectedTouple);
+            }
+
+            return collectedData;
+        }
+        static bool IsValidDataSet(string temperature, string light, string timeStamp)
+        {
+            List<(string temperature, string light, string timeStamp)> collectedData = 
+                new List<(string temperature, string light, string timeStamp)>();
+            bool validData = false;
+
+            collectedData = DataRecorderReadDataFile();
+            
+            foreach ((string temperature, string light, string timeStamp) tempAndLightInfo in collectedData)
+            {
+                if ((tempAndLightInfo.temperature == temperature) && (tempAndLightInfo.light == light) && (tempAndLightInfo.timeStamp == timeStamp))
+                {
+                    validData = true;
+                    Console.WriteLine("You have entered a valid data set.");
+                    break;
+                }
+
+                else
+                {
+                    Console.WriteLine("The data you have input is not in the system.");
+                }
+            }
+
+            return validData;
+        }
+        static void DataRecorderWriteDataToFile(Finch myFinch)
+        {
+            string dataPath = @"Data/TempAndLight.txt";
+            string temperatureAndLightInfo;
+            double temperature2;
+            string temperature;
+            double light2;
+            string light;
+            string timeStamp;
+
+            Console.Clear();
+            Console.WriteLine("Press any key to begin data collection.");
+            Console.ReadKey();
+            temperature2 = myFinch.getTemperature();
+            temperature = temperature2.ToString("n2");
+            light2 = (myFinch.getRightLightSensor() + myFinch.getLeftLightSensor()) / 2;
+            light = light2.ToString("n2");
+            timeStamp = DateTime.Now.ToString("t");
+
+            temperatureAndLightInfo = temperature + "," + light + ',' + timeStamp;
+
+            Console.WriteLine($"Temperature: {temperature}");
+            Console.WriteLine($"Light: {light}");
+            Console.WriteLine($"Time: {timeStamp}");
+
+            DisplayContinuePrompt();
+
+            File.AppendAllText(dataPath, temperatureAndLightInfo);
+        }
 
         static void DataRecorderDisplayData(double[] temperatures, int numberOfDataPoints)
         {
@@ -912,7 +1041,7 @@ namespace Project_FinchControl
                         break;
 
                     case "both":
-                        currentLightSensorValue = (myFinch.getRightLightSensor() + myFinch.getRightLightSensor()) / 2;
+                        currentLightSensorValue = (myFinch.getRightLightSensor() + myFinch.getLeftLightSensor()) / 2;
                         break;
                 }
                 switch (rangeType)
@@ -1284,7 +1413,7 @@ namespace Project_FinchControl
         /// *****************************************************************
         /// </summary>
         static void UserProgrammingDisplayExecuteFinchCommands(
-            List<Command> commands, 
+            List<Command> commands,
             (int motorSpeed, int ledBrightness, double waitSeconds) commandParameters,
             Finch myFinch)
         {
@@ -1381,8 +1510,8 @@ namespace Project_FinchControl
                         myFinch.wait(waitMilliSeconds);
                         myFinch.setMotors(0, 0);
                         myFinch.wait(300);
-                        myFinch.setMotors(TURNING_MOTOR_SPEED, -TURNING_MOTOR_SPEED);
-                        myFinch.wait(500);
+                        myFinch.setMotors(-TURNING_MOTOR_SPEED, TURNING_MOTOR_SPEED);
+                        myFinch.wait(300);
                         myFinch.setMotors(0, 0);
                         myFinch.setLED(0, 0, 0);
 
@@ -1401,7 +1530,7 @@ namespace Project_FinchControl
                         myFinch.setMotors(motorSpeed, motorSpeed);
                         myFinch.wait(waitMilliSeconds);
                         myFinch.setMotors(0, 0);
-                        myFinch.wait(300);
+                        myFinch.wait(500);
                         myFinch.setMotors(TURNING_MOTOR_SPEED, -TURNING_MOTOR_SPEED);
                         myFinch.wait(500);
                         myFinch.setMotors(0, 0);
@@ -1420,7 +1549,7 @@ namespace Project_FinchControl
                         myFinch.wait(waitMilliSeconds);
                         myFinch.setMotors(0, 0);
                         myFinch.wait(300);
-                        myFinch.setMotors(TURNING_MOTOR_SPEED, -TURNING_MOTOR_SPEED);
+                        myFinch.setMotors(-TURNING_MOTOR_SPEED, TURNING_MOTOR_SPEED);
                         myFinch.wait(500);
                         myFinch.setMotors(0, 0);
                         myFinch.setLED(0, 0, 0);
@@ -1510,21 +1639,16 @@ namespace Project_FinchControl
         /// *                     Welcome Screen                            *
         /// *****************************************************************
         /// </summary>
-        static string DisplayWelcomeScreen()
+        static void DisplayWelcomeScreen()
         {
             Console.CursorVisible = false;
-            string userName;
-
+            
             Console.Clear();
             Console.WriteLine();
             Console.WriteLine("\t\tFinch Control");
             Console.WriteLine();
-            Console.WriteLine("Please enter your name:");
-            userName = Console.ReadLine();
-            Console.WriteLine($"Welcome {userName}!");
 
             DisplayContinuePrompt();
-            return userName;
         }
 
 
@@ -1590,7 +1714,7 @@ namespace Project_FinchControl
 
             Console.Clear();
             Console.WriteLine("\t\tApp Rating");
-            Console.WriteLine("Do you want to rate your experience?");
+            Console.WriteLine("Do you want to rate your experience? [yes || no]");
             userResponse = Console.ReadLine();
             if (userResponse == "yes" || userResponse == "yep")
             {
@@ -1613,6 +1737,261 @@ namespace Project_FinchControl
             DisplayContinuePrompt();
         }
 
-            #endregion
+        #endregion
+
+        #region THEME MENU
+
+        // *****************************************************************
+        // *                            Set Theme                          *
+        // *****************************************************************
+        static void DisplaySetTheme()
+        {
+            (ConsoleColor foregroundColor, ConsoleColor backgroundColor) themeColors;
+            bool themeChosen = false;
+
+            //current theme
+            themeColors = ReadThemeData();
+            Console.ForegroundColor = themeColors.foregroundColor;
+            Console.BackgroundColor = themeColors.backgroundColor;
+            Console.Clear();
+
+            DisplayScreenHeader("Set Application Theme");
+
+            Console.WriteLine($"\tCurrent foreground color: {Console.ForegroundColor}");
+            Console.WriteLine($"\tCurrent background color: {Console.BackgroundColor}");
+            Console.WriteLine();
+
+            Console.WriteLine("\t would you like to change te current theme? [yes || no]");
+            if (Console.ReadLine().ToLower() == "yes")
+            {
+                do
+                {
+                    themeColors.foregroundColor = GetConsoleColorFromUser("foreground");
+                    themeColors.backgroundColor = GetConsoleColorFromUser("background");
+
+                    //set new theme
+                    Console.ForegroundColor = themeColors.foregroundColor;
+                    Console.BackgroundColor = themeColors.backgroundColor;
+                    Console.Clear();
+
+                    DisplayScreenHeader("Set Application Theme");
+
+                    Console.WriteLine($"\tNew foreground color: {Console.ForegroundColor}");
+                    Console.WriteLine($"\tNew background color: {Console.BackgroundColor}");
+
+                    Console.WriteLine();
+                    Console.WriteLine("\tIs this the theme you would like?");
+                    if (Console.ReadLine().ToLower() == "yes")
+                    {
+                        themeChosen = true;
+                        WriteThemeData(themeColors.foregroundColor, themeColors.backgroundColor);
+                    }
+                } while (!themeChosen);
+            }
+
+        }
+
+        // *****************************************************************
+        // *                        Get Colors From User                   *
+        // *****************************************************************
+        static ConsoleColor GetConsoleColorFromUser(string property)
+        {
+            ConsoleColor consoleColor;
+            bool validConsoleColor;
+
+            do
+            {
+                Console.WriteLine($"\tEnter a value for the {property}:");
+                validConsoleColor = Enum.TryParse<ConsoleColor>(Console.ReadLine(), true, out consoleColor);
+
+                if (!validConsoleColor)
+                {
+                    Console.WriteLine("\n\t*****It appears you have entered an invalid console color selection. Please try again.*****\n");
+                }
+
+                else
+                {
+                    validConsoleColor = true;
+                }
+
+            } while (!validConsoleColor);
+
+            return consoleColor;
+        }
+
+        // *****************************************************************
+        // *                         Read Theme Data                       *
+        // *****************************************************************
+        static (ConsoleColor foregroundColor, ConsoleColor backgroundColor) ReadThemeData()
+        {
+            string dataPath = @"Data\Theme.txt";
+            string[] themeColors;
+
+            ConsoleColor foregroundColor;
+            ConsoleColor backgroundColor;
+
+            themeColors = File.ReadAllLines(dataPath);
+
+            Enum.TryParse(themeColors[0], true, out foregroundColor);
+            Enum.TryParse(themeColors[1], true, out backgroundColor);
+
+            return (foregroundColor, backgroundColor);
+        }
+
+        // *****************************************************************
+        // *                        Write Theme Data                       *
+        // *****************************************************************
+        static void WriteThemeData(ConsoleColor foreground, ConsoleColor background)
+        {
+            string dataPath = @"Data/Theme.txt";
+
+            File.WriteAllText(dataPath, foreground.ToString() + "\n");
+            File.AppendAllText(dataPath, background.ToString());
+        }
+        #endregion
+
+        #region LOGIN
+        // *****************************************************************
+        // *                       Login/Register Screen                   *
+        // *****************************************************************
+        static void DisplayLoginRegister()
+        {
+            DisplayScreenHeader("Login/Register");
+
+            Console.WriteLine("\tAre you a registered user? [yes \\ no]");
+            if (Console.ReadLine().ToLower() == "yes")
+            {
+                DisplayLogin();
+            }
+
+            else
+            {
+                DisplayRegisterUser();
+                DisplayLogin();
+            }
+        }
+
+        // *****************************************************************
+        // *                          Login Screen                         *
+        // *****************************************************************
+        static void DisplayLogin()
+        {
+            string userName;
+            string password;
+            bool validLogin;
+
+            do
+            {
+                DisplayScreenHeader("Login");
+
+                Console.WriteLine();
+                Console.WriteLine("\tEnter username:");
+                userName = Console.ReadLine();
+                Console.WriteLine("\tEnter password:");
+                password = Console.ReadLine();
+
+                validLogin = IsValidLoginInfo(userName, password);
+
+                Console.WriteLine();
+
+                if (validLogin)
+                {
+                    Console.WriteLine("You are now logged in!");
+                }
+
+                else
+                {
+                    Console.WriteLine("Invalid username and password combination.");
+                    Console.WriteLine("Please try again.");
+                }
+                DisplayContinuePrompt();
+            } while (!validLogin);
+        }
+
+        // *****************************************************************
+        // *                        Register Screen                        *
+        // *****************************************************************
+        static void DisplayRegisterUser()
+        {
+            string userName;
+            string password;
+
+            DisplayScreenHeader("Register");
+
+            Console.WriteLine("\t Enter your username:");
+            userName = Console.ReadLine();
+            Console.WriteLine("\t Enter your password:");
+            password = Console.ReadLine();
+
+            WriteLoginInfoData(userName, password);
+
+            Console.WriteLine();
+            Console.WriteLine("You have entered the following information and it has been saved.");
+            Console.WriteLine($"Username: {userName}");
+            Console.WriteLine($"Password: {password}");
+
+            DisplayContinuePrompt();
+        }
+
+        // *****************************************************************
+        // *                      Save Login Information                   *
+        // *****************************************************************
+        static void WriteLoginInfoData(string userName, string password)
+        {
+            string dataPath = @"Data/Logins.txt";
+            string loginInfoText;
+
+            loginInfoText = userName + "," + password;
+
+            File.AppendAllText(dataPath, loginInfoText);
+        }
+
+        // *****************************************************************
+        // *                    Validating Login Info                      *
+        // *****************************************************************
+        static bool IsValidLoginInfo(string userName, string password)
+        {
+            List<(string userName, string password)> registeredUserLoginInfo = new List<(string userName, string password)>();
+            bool validUser = false;
+
+            registeredUserLoginInfo = ReadLoginInfoData();
+                foreach ((string userName, string password) userLoginInfo in registeredUserLoginInfo)
+                {
+                    if ((userLoginInfo.userName == userName) && (userLoginInfo.password == password))
+                    {
+                        validUser = true;
+                        break;
+                    }
+                }
+
+            return validUser;
+        }
+
+        static List<(string userName, string password)> ReadLoginInfoData()
+        {
+            string dataPath = @"Data/Logins.txt";
+
+            string[] loginInfoArray;
+            (string userName, string password) loginInfoTuple;
+
+            List<(string userName, string password)> registeredUserLoginInfo = new List<(string userName, string password)>();
+
+            loginInfoArray = File.ReadAllLines(dataPath);
+
+            foreach (string loginInfoText in loginInfoArray)
+            {
+                loginInfoArray = loginInfoText.Split(',');
+
+                loginInfoTuple.userName = loginInfoArray[0];
+                loginInfoTuple.password = loginInfoArray[1];
+
+                registeredUserLoginInfo.Add(loginInfoTuple);
+            }
+
+            return registeredUserLoginInfo;
+
+        }
+
+        #endregion
     }
 }
